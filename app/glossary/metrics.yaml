@@ -1,0 +1,22 @@
+metrics:
+  customer_value:
+    aliases: ["best customer", "top customer", "worst customer", "biggest customer"]
+    candidates:
+      - name: total_spend
+        sql_expr: "SUM(orders.total_amount)"
+        label: "Total amount spent"
+      - name: order_count
+        sql_expr: "COUNT(orders.id)"
+        label: "Number of orders placed"
+      - name: recency
+        sql_expr: "MAX(orders.order_date)"
+        label: "Most recent order date"
+  employee_performance:
+    aliases: ["best employee", "top employee", "worst employee"]
+    candidates:
+      - name: total_commission
+        sql_expr: "SUM(sales.commission)"
+        label: "Total commission earned"
+      - name: sales_count
+        sql_expr: "COUNT(sales.id)"
+        label: "Number of sales made"

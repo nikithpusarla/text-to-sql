@@ -1,0 +1,177 @@
+[
+  {
+    "query": "who is our best customer",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "which customer spent the most last quarter",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "show top employees by commission",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "who are our customers with the most orders this year",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "give me the best employee",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "who is our worst customer",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "show the biggest customer",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "rank customers by best value",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "which employee is worst",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "find the top employee",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "best customer last month",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "top customers this quarter",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "worst customers this year",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "best employee last year",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "which employee made the most sales",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "which customer is our biggest account",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "show the top customer accounts",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "list the worst employee performance",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "who was our best customer in 2024",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "give me the top customer by business value",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "which employee should receive an award",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "find our highest performing employee",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "who has the most valuable customer relationship",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "show customers with the highest value",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "which employee is strongest in sales",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "rank our worst accounts",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "top sales employee this month",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "best client by recent activity",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "who are the biggest customers",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "which employee sold the most",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "show our least valuable customer",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "top account by order activity",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  },
+  {
+    "query": "best sales representative",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "worst sales representative",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_commission", "sales_count"]
+  },
+  {
+    "query": "customers with the most recent orders",
+    "expected_ambiguous_slots": ["metric"],
+    "expected_candidates": ["total_spend", "order_count", "recency"]
+  }
+]
