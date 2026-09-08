@@ -120,6 +120,8 @@ The data intentionally has different customer and employee performance patterns 
 
 The application uses the `readonly_user` PostgreSQL role for execution. The Docker database is mapped to host port `5433` because port `5432` may already be occupied by a native PostgreSQL installation.
 
+The complete reproducible database setup is documented in [DATABASE.md](DATABASE.md). The SQL seed file is included in `app/db/seed_data.sql`, so the database is recreated automatically when the Docker volume is initialized.
+
 ## Technology Stack
 
 - Python 3.11+

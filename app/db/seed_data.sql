@@ -30,6 +30,8 @@ CREATE TABLE IF NOT EXISTS sales (
 
 TRUNCATE TABLE sales, orders, customers, employees RESTART IDENTITY;
 
+SELECT setseed(0.42);
+
 INSERT INTO customers (name, signup_date, status)
 SELECT
     'Customer ' || gs.n,
