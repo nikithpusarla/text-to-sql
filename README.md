@@ -27,7 +27,20 @@ A Python 3.11+ project for generating SQL from natural-language questions while 
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-python -m app.cli
+docker compose up -d
+uvicorn app.main:app --reload
+```
+
+Open `http://127.0.0.1:8000/` for the Queryline dashboard. Ask a question in plain English, choose a clarification when prompted, and the dashboard will display the answer from PostgreSQL.
+
+The interactive API documentation is available at `http://127.0.0.1:8000/docs`.
+
+For command-line testing without the browser:
+
+```bash
+python -m app.cli "who is our best customer"
+python -m app.db.introspect
+pytest -q
 ```
 
 ## Notes

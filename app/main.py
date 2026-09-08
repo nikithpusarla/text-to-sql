@@ -3,6 +3,8 @@ from __future__ import annotations
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.engine.ambiguity_detector import detect_ambiguity
 from app.engine.clarifier import build_clarification_questions
@@ -18,6 +20,12 @@ from app.models.query import ExecuteRequest, QueryRequest, QueryResponse
 from app.session.state import get_session, set_session, update_session
 
 app = FastAPI(title="Text-to-SQL Clarification Engine")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+
+@app.get("/", include_in_schema=False)
+def dashboard() -> FileResponse:
+    return FileResponse("app/static/index.html")
 
 
 @app.get("/health")

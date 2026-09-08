@@ -12,6 +12,12 @@ def test_health_endpoint():
     assert response.json() == {"status": "ok"}
 
 
+def test_dashboard_is_served():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Queryline | Ask your data" in response.text
+
+
 def test_query_returns_clarification_questions():
     response = client.post("/query", json={"query": "who is our best customer"})
     assert response.status_code == 200

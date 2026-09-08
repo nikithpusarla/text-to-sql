@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Queryline | Ask your data</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">Q</span><span>Queryline</span></div>
+      <div class="workspace-label">WORKSPACE</div>
+      <div class="workspace"><span class="status-dot"></span><span>Companies database</span><span class="chevron">⌄</span></div>
+      <nav>
+        <a class="nav-item active" href="#"><span>⌁</span> Ask data</a>
+        <a class="nav-item" href="#recent"><span>◷</span> Recent queries</a>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="connection"><span class="status-dot"></span><div><strong>Database connected</strong><small>PostgreSQL · read-only</small></div></div>
+        <div class="user"><span class="avatar">NP</span><div><strong>Nikith Pusarla</strong><small>Owner</small></div><span class="dots">•••</span></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><span class="eyebrow">DATA WORKSPACE</span><h1>Ask your data</h1></div><div class="top-actions"><button class="icon-button" title="Notifications">♢</button><a class="docs-link" href="/docs" target="_blank">API docs ↗</a></div></header>
+      <section class="content">
+        <div class="welcome"><p class="eyebrow">NATURAL LANGUAGE ANALYTICS</p><h2>What would you like<br><em>to understand?</em></h2><p class="lede">Ask a question in plain English. Queryline will clarify intent before touching your data.</p></div>
+        <div class="ask-panel">
+          <form id="query-form">
+            <textarea id="query-input" placeholder="e.g. Who is our best customer?" autofocus></textarea>
+            <div class="composer-footer"><span class="hint">Press Enter to ask · Shift + Enter for a new line</span><button class="ask-button" type="submit"><span>Ask Queryline</span><span class="arrow">↗</span></button></div>
+          </form>
+        </div>
+        <div class="suggestions"><span class="suggestion-label">TRY ASKING</span><button data-query="Who is our best customer?">Best customers</button><button data-query="Which employee is performing best?">Employee performance</button><button data-query="Show customers with the most orders">Order activity</button></div>
+        <section id="conversation" class="conversation hidden"></section>
+      </section>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
