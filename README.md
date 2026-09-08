@@ -326,7 +326,7 @@ The current evaluation set contains 35 examples and reports:
 Latest verified results:
 
 ```text
-14 passed
+18 passed
 ambiguity detection: 100.0% (35/35)
 false positives: 0
 false negatives: 0

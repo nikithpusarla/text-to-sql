@@ -40,7 +40,8 @@ def parse_with_llm(raw_query: str, schema_summary: str = "") -> QueryIntent:
 def parse_without_llm(raw_query: str) -> QueryIntent:
     """Deterministic fallback used when no Anthropic key is configured."""
     normalized = raw_query.lower()
-    entity_value = "employee" if "employee" in normalized else "customer"
+    employee_terms = ("employee", "sales representative", "sales rep", "staff member")
+    entity_value = "employee" if any(term in normalized for term in employee_terms) else "customer"
     metric_status = SlotStatus.AMBIGUOUS if any(word in normalized for word in ("best", "top", "worst", "biggest")) else SlotStatus.MISSING
     time_range = "last_30_days" if "last 30 days" in normalized else "all_time"
     return QueryIntent(

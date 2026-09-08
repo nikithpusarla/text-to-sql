@@ -39,18 +39,31 @@ def generate_with_llm(intent: ResolvedIntent, schema_summary: str) -> SQLGenerat
 
 
 def generate_fallback_sql(intent: ResolvedIntent) -> SQLGenerationResult:
+    descending = not any(word in intent.raw_query.lower().split() for word in ("worst", "lowest", "least"))
+    order_direction = "DESC" if descending else "ASC"
     if intent.entity.value == "employee":
+        metric = intent.metric.value or "sales_count"
+        expression = {
+            "total_commission": "SUM(sales.commission)",
+            "sales_count": "COUNT(sales.id)",
+        }.get(metric, "COUNT(sales.id)")
         sql = (
-            "SELECT employees.name, COUNT(sales.id) AS sales_count "
+            f"SELECT employees.name, {expression} AS {metric} "
             "FROM employees JOIN sales ON sales.employee_id = employees.id "
-            "GROUP BY employees.id, employees.name ORDER BY sales_count DESC LIMIT 100"
+            f"GROUP BY employees.id, employees.name ORDER BY {metric} {order_direction} LIMIT 100"
         )
         tables = ["employees", "sales"]
     else:
+        metric = intent.metric.value or "total_spend"
+        expression = {
+            "total_spend": "SUM(orders.total_amount)",
+            "order_count": "COUNT(orders.id)",
+            "recency": "MAX(orders.order_date)",
+        }.get(metric, "SUM(orders.total_amount)")
         sql = (
-            "SELECT customers.name, SUM(orders.total_amount) AS total_spend "
+            f"SELECT customers.name, {expression} AS {metric} "
             "FROM customers JOIN orders ON orders.customer_id = customers.id "
-            "GROUP BY customers.id, customers.name ORDER BY total_spend DESC LIMIT 100"
+            f"GROUP BY customers.id, customers.name ORDER BY {metric} {order_direction} LIMIT 100"
         )
         tables = ["customers", "orders"]
     return SQLGenerationResult(sql=sql, explanation="Fallback SQL generated without an LLM key.", tables_used=tables)
