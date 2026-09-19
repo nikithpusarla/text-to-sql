@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import Any
 
 import psycopg
@@ -19,5 +18,20 @@ def get_connection_kwargs() -> dict[str, Any]:
     }
 
 
+def get_admin_connection_kwargs() -> dict[str, Any]:
+    return {
+        "dbname": settings.postgres_db,
+        "user": settings.postgres_user,
+        "password": settings.postgres_password,
+        "host": settings.postgres_host,
+        "port": settings.postgres_port,
+        "autocommit": True,
+    }
+
+
 def get_connection():
     return psycopg.connect(**get_connection_kwargs())
+
+
+def get_admin_connection():
+    return psycopg.connect(**get_admin_connection_kwargs())

@@ -186,13 +186,32 @@ text2sql-clarify/
 ### Install and start
 
 ```powershell
-cd C:\Users\nikit\OneDrive\Desktop\backend\text2sql-clarify
+cd C:\Users\nikit\Downloads\text to sql
 python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 docker compose up -d
 ```
 
 The `.env` file contains local database settings. Do not commit it because it may contain secrets.
+
+### `.env.example` usage
+
+`.env.example` is the complete local configuration template. Copy it to `.env` before starting the API:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+The API connects to PostgreSQL with `POSTGRES_READONLY_USER` and
+`POSTGRES_READONLY_PASSWORD`. On startup, `DATABASE_INIT_ON_STARTUP=true` uses
+the `POSTGRES_USER` and `POSTGRES_PASSWORD` bootstrap account to create missing
+tables, indexes, and read-only grants. Initialization is idempotent and does not
+seed or truncate data.
+
+For a production deployment, run schema migrations through a release job and
+set `DATABASE_INIT_ON_STARTUP=false` for the web process. Store all database and
+Anthropic credentials in the deployment secret manager rather than committing
+`.env`.
 
 Verify the container:
 
@@ -218,6 +237,12 @@ Then open:
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - Health check: `http://127.0.0.1:8000/health`
 
+Run the interactive CLI against the configured database:
+
+```powershell
+python -m app.cli "Who is our best customer?"
+```
+
 ## Example User Flow
 
 1. Open the dashboard.
@@ -226,6 +251,21 @@ Then open:
 4. Queryline generates one guarded PostgreSQL `SELECT` statement.
 5. The read-only executor runs the query.
 6. The dashboard displays the answer rows and generated SQL.
+
+## Example Questions and Generated SQL
+
+With fallback mode enabled, these questions are deterministic after the
+clarification choice:
+
+| Question | Clarification | Generated SQL shape |
+| --- | --- | --- |
+| `Who is our best customer?` | `total_spend` | `SELECT customers.name, SUM(orders.total_amount) AS total_spend ... ORDER BY total_spend DESC LIMIT 100` |
+| `Who has the most orders?` | `order_count` | `SELECT customers.name, COUNT(orders.id) AS order_count ... ORDER BY order_count DESC LIMIT 100` |
+| `Which employee sold the most?` | `sales_count` | `SELECT employees.name, COUNT(sales.id) AS sales_count ... ORDER BY sales_count DESC LIMIT 100` |
+
+The generated SQL is always passed through the SELECT-only validator before it
+can be executed. The full statement is returned by the API and shown in the
+dashboard for inspection.
 
 ## API Endpoints
 
@@ -326,7 +366,7 @@ The current evaluation set contains 35 examples and reports:
 Latest verified results:
 
 ```text
-18 passed
+24 passed
 ambiguity detection: 100.0% (35/35)
 false positives: 0
 false negatives: 0

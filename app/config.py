@@ -9,9 +9,12 @@ class Settings(BaseSettings):
 
     app_env: str = Field(default="development")
     database_url: str = Field(default="postgresql://app_user:app_password@localhost:5432/companies")
+    database_init_on_startup: bool = Field(default=True)
     anthropic_api_key: str = Field(default="")
     anthropic_model: str = Field(default="claude-haiku-4-5-20251001")
     postgres_db: str = Field(default="companies")
+    postgres_user: str = Field(default="app_user")
+    postgres_password: str = Field(default="app_password")
     postgres_readonly_user: str = Field(default="readonly_user")
     postgres_readonly_password: str = Field(default="readonly_password")
     postgres_host: str = Field(default="localhost")

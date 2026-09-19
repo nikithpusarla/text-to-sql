@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
@@ -12,6 +13,8 @@ from app.engine.guardrails import SQLValidationError, validate_and_limit
 from app.engine.intent_parser import parse_with_llm
 from app.engine.sql_generator import generate_with_llm
 from app.audit import log_event
+from app.config import settings
+from app.db.initialize import initialize_schema
 from app.executor import execute_sql
 from app.schema import SCHEMA
 from app.models.clarification import ClarificationResponse
@@ -19,7 +22,15 @@ from app.models.intent import MetricSlot, ResolvedIntent, SlotStatus
 from app.models.query import ExecuteRequest, QueryRequest, QueryResponse
 from app.session.state import get_session, set_session, update_session
 
-app = FastAPI(title="Text-to-SQL Clarification Engine")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    if settings.database_init_on_startup and settings.app_env != "test":
+        initialize_schema()
+    yield
+
+
+app = FastAPI(title="Text-to-SQL Clarification Engine", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 
