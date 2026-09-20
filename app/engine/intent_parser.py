@@ -5,7 +5,6 @@ import anthropic
 from app.config import settings
 from app.models.intent import MetricSlot, QueryIntent, SlotStatus
 
-
 INTENT_TOOL = {
     "name": "set_query_intent",
     "description": "Extract query intent and mark uncertain slots ambiguous or missing.",

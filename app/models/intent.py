@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -14,9 +13,9 @@ class SlotStatus(str, Enum):
 
 class MetricSlot(BaseModel):
     status: SlotStatus
-    value: Optional[str] = None
+    value: str | None = None
     candidates: list[str] = []
-    sql_expr: Optional[str] = None
+    sql_expr: str | None = None
 
 
 class QueryIntent(BaseModel):
@@ -24,7 +23,7 @@ class QueryIntent(BaseModel):
     entity: MetricSlot
     metric: MetricSlot
     time_range: MetricSlot
-    top_n: Optional[int] = None
+    top_n: int | None = None
     filters: list[str] = []
 
 
@@ -32,7 +31,7 @@ class ResolvedIntent(QueryIntent):
     """All slots guaranteed RESOLVED; validation is enforced at construction time."""
 
     @model_validator(mode="after")
-    def ensure_all_slots_resolved(self) -> "ResolvedIntent":
+    def ensure_all_slots_resolved(self) -> ResolvedIntent:
         slots = [self.entity, self.metric, self.time_range]
         for slot in slots:
             if slot.status != SlotStatus.RESOLVED:

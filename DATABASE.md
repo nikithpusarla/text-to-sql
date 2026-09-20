@@ -1,27 +1,41 @@
-# Queryline Test Database
+# Database Guide
 
-This project uses a local PostgreSQL 16 database for development and testing. The database is packaged as reproducible project code, not as a private or binary database dump.
+Queryline uses PostgreSQL 16 for its local analytics workspace. The repository includes the schema, seed data, Docker Compose configuration, and an application-level initializer so a new developer can reproduce the same environment.
 
-## Database Configuration
+## Local configuration
 
-| Setting | Value |
+| Setting | Local value |
 |---|---|
 | Engine | PostgreSQL 16 Alpine |
 | Database | `companies` |
-| Docker container | `text2sql-postgres` |
-| Host | `localhost` |
 | Host port | `5433` |
 | Container port | `5432` |
-| Application role | `readonly_user` |
-| Access | Read-only `SELECT` access |
+| Bootstrap role | `app_user` |
+| Query role | `readonly_user` |
+| Query access | Read-only `SELECT` |
 
-Port `5433` is used because port `5432` can be occupied by a native PostgreSQL installation on Windows.
+Port `5433` avoids colliding with a native PostgreSQL installation that may already use `5432`.
 
-## Tables
+## Start the database
+
+From the repository root:
+
+```bash
+python -m pip install -r requirements.txt
+cp .env.example .env
+docker compose up -d
+docker compose ps
+```
+
+On Windows PowerShell, use `Copy-Item .env.example .env` for the second command.
+
+The Compose service mounts `app/db/seed_data.sql` into PostgreSQL's initialization directory. The seed script runs only when the PostgreSQL data volume is created.
+
+## Schema and sample data
+
+The database contains four tables:
 
 ### `customers`
-
-Stores customer identity and lifecycle information.
 
 ```sql
 id SERIAL PRIMARY KEY
@@ -31,8 +45,6 @@ status TEXT CHECK (status IN ('active', 'churned', 'pending'))
 ```
 
 ### `orders`
-
-Stores customer purchases and monetary values.
 
 ```sql
 id SERIAL PRIMARY KEY
@@ -44,8 +56,6 @@ net_amount NUMERIC(10,2)
 
 ### `employees`
 
-Stores employees and departments.
-
 ```sql
 id SERIAL PRIMARY KEY
 name TEXT NOT NULL
@@ -55,8 +65,6 @@ hire_date DATE
 
 ### `sales`
 
-Connects employees to orders and stores commissions.
-
 ```sql
 id SERIAL PRIMARY KEY
 employee_id INT REFERENCES employees(id)
@@ -65,58 +73,30 @@ sale_date DATE
 commission NUMERIC(10,2)
 ```
 
-## Seeded Test Data
+The seed creates approximately 50 customers, 300 orders, 10 employees, and 300 sales records. A fixed PostgreSQL random seed makes generated amounts reproducible on a fresh volume.
 
-The seed script creates:
+`app/db/schema.sql` contains idempotent table and index creation. `app/db/initialize.py` applies that schema and grants the configured read-only role without truncating or reseeding existing data. The API runs it on startup only when `DATABASE_INIT_ON_STARTUP=true` and `APP_ENV` is not `test`.
 
-- 50 customers
-- 300 orders
-- 10 employees
-- 300 sales records
+## Roles and permissions
 
-The seed uses a fixed PostgreSQL random seed (`0.42`) so generated monetary values are reproducible when the database volume is initialized. The data includes different customer and employee performance patterns for testing ambiguous questions such as:
+The bootstrap role is used only for initialization. Query execution uses `POSTGRES_READONLY_USER` and `POSTGRES_READONLY_PASSWORD` from `.env`.
 
-- `Who is our best customer?`
-- `Which employee is performing best?`
-- `Show customers with the most orders.`
+The initializer grants:
 
-## How the Database Is Created
+- `CONNECT` on the database.
+- `USAGE` on the `public` schema.
+- `SELECT` on current tables.
+- Default `SELECT` privileges for future tables.
 
-Docker Compose mounts `app/db/seed_data.sql` into PostgreSQL's initialization directory:
+Database permissions complement, but do not replace, application SQL validation.
 
-```text
-./app/db/seed_data.sql:/docker-entrypoint-initdb.d/01_seed.sql:ro
-```
+## Verify the live schema
 
-On a fresh volume, PostgreSQL automatically:
-
-1. Creates the four tables.
-2. Inserts the sample rows.
-3. Creates the `readonly_user` role.
-4. Grants that role connection, schema usage, and table `SELECT` privileges.
-
-Start the database from the repository root:
-
-```powershell
-docker compose up -d
-docker compose ps
-```
-
-Expected container:
-
-```text
-text2sql-postgres   postgres:16-alpine   healthy   0.0.0.0:5433->5432/tcp
-```
-
-## Verify the Database
-
-Run the application introspector:
-
-```powershell
+```bash
 python -m app.db.introspect
 ```
 
-Expected tables:
+Expected tables and columns:
 
 ```json
 {
@@ -127,20 +107,20 @@ Expected tables:
 }
 ```
 
-The application connects using the read-only credentials from `.env` and sets a five-second `statement_timeout` before executing queries.
+The executor sets `statement_timeout` to five seconds before each query.
 
-## Recreate the Database
+## Recreate the sample database
 
-Initialization scripts run only when PostgreSQL creates a new data directory. To fully recreate the test database and reseed it:
+To discard the local volume and reseed from scratch:
 
-```powershell
+```bash
 docker compose down -v
 docker compose up -d
 python -m app.db.introspect
 ```
 
-The `-v` flag deletes the local Docker database volume. Do not use it if you need to preserve local database changes.
+The `-v` flag permanently removes local database changes. Do not use it when preserving development data matters.
 
-## Why the Database Is in the Repository
+## Production guidance
 
-The repository includes the schema and seed SQL so every developer and CI environment can create the same test database. The live database credentials and Docker volume are not committed. The `.env` file is ignored by Git, while `.env.example` provides safe development defaults.
+Do not use the sample credentials in a hosted deployment. Provision PostgreSQL separately, store secrets in the platform's secret manager, run schema migrations as a release step, and set `DATABASE_INIT_ON_STARTUP=false` for web workers. Use a managed PostgreSQL or Redis session repository when running more than one application instance.

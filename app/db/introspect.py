@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-from typing import Any
 
 from app.db.connection import get_connection
 
@@ -14,10 +13,9 @@ def get_schema_summary() -> dict[str, list[str]]:
         ORDER BY table_name, ordinal_position
     """
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query)
-            rows = cur.fetchall()
+    with get_connection() as conn, conn.cursor() as cur:
+        cur.execute(query)
+        rows = cur.fetchall()
 
     schema: dict[str, list[str]] = {}
     for table_name, column_name in rows:

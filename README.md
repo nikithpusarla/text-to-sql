@@ -1,405 +1,348 @@
-# Queryline: Text-to-SQL with Clarification Engine
+# Queryline
 
-Queryline is a natural-language analytics application that lets people ask questions about company data without writing SQL. Its key behavior is deliberate clarification: when a question is ambiguous, Queryline asks the user to choose the intended definition before generating or executing a query.
+> A clarification-first business intelligence assistant that turns natural-language questions into safe, inspectable PostgreSQL queries.
 
-For example, "Who is our best customer?" could mean the customer with the highest total spend, the most orders, or the most recent order. Queryline identifies that ambiguity, presents the choices, and only continues after the user selects one.
+[![Tests](https://github.com/nikithpusarla/text-to-sql/actions/workflows/ci.yml/badge.svg)](https://github.com/nikithpusarla/text-to-sql/actions/workflows/ci.yml)
 
-## What Has Been Built
+## Table of Contents
 
-- Browser-based SaaS-style dashboard named Queryline
-- Natural-language question input
-- Clarification questions with multiple-choice options
-- Multi-turn in-memory sessions
-- Structured Anthropic tool-use integration for intent parsing and SQL generation
-- Deterministic fallback mode when no Anthropic API key is configured
-- PostgreSQL 16 database running through Docker Compose
-- Seeded sample company data
-- Schema introspection through `information_schema`
-- Read-only PostgreSQL role for query execution
-- SQL parsing and validation with `sqlglot`
-- SELECT-only enforcement
-- Table and column validation against the known schema
-- Automatic `LIMIT 100` injection
-- Five-second PostgreSQL statement timeout
-- SQL and resolved-intent audit logging
-- FastAPI API and interactive Swagger documentation
-- CLI workflow for local testing
-- 35-case ambiguity evaluation set
-- Automated test suite
+- [Overview](#overview)
+- [Why this project matters](#why-this-project-matters)
+- [What problem it solves](#what-problem-it-solves)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Tech stack](#tech-stack)
+- [Quick start](#quick-start)
+- [Demo flow](#demo-flow)
+- [Example prompts and SQL](#example-prompts-and-sql)
+- [API](#api)
+- [Evaluation](#evaluation)
+- [Security and guardrails](#security-and-guardrails)
+- [Project structure](#project-structure)
+- [Deployment](#deployment)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
 
-## How the Workflow Works
+## Overview
 
-```text
-User question
-      |
-      v
-Intent parsing
-      |
-      v
-Ambiguity detection
-      |
-      +---- unresolved intent ----> clarification choices
-      |                                    |
-      |                                    v
-      +---------------------------- resolved intent
-                                           |
-                                           v
-                                  structured SQL generation
-                                           |
-                                           v
-                                  SQL guardrails and LIMIT
-                                           |
-                                           v
-                                  read-only PostgreSQL query
-                                           |
-                                           v
-                                      answer table
+Queryline is a SaaS-style analytics workspace for teams that need answers from operational data but do not want every question to become a manual SQL task. The system converts a natural-language question into a structured intent, asks for clarification when a business term is underspecified, generates one read-only SQL statement, validates it, and presents the result with the SQL visible for inspection.
+
+The sample workspace models customers, orders, employees, and sales. It runs locally with PostgreSQL and works without an Anthropic key through deterministic fallback parsing and SQL generation.
+
+## Why this project matters
+
+Text-to-SQL is not only a language-generation problem. In a business setting, the difficult failure is often a plausible query that answers the wrong question. Queryline treats ambiguity as a product concern and safety as an execution boundary:
+
+- Business language such as "best customer" is clarified instead of silently guessed.
+- Generated SQL is structured, parsed, schema-checked, capped, and executed with a read-only role.
+- The answer is explainable because users can inspect the selected definition and generated SQL.
+- The offline evaluation harness measures intent, clarification quality, SQL semantics, and safety behavior without fabricating live-model results.
+
+## What problem it solves
+
+A sales or operations stakeholder may ask, "Who is our best customer?" That could mean highest spend, most orders, or most recent activity. A conventional text-to-SQL demo may choose one definition invisibly. Queryline identifies the missing definition and presents the available business metrics before generating SQL. This reduces semantic errors while preserving a fast, natural-language workflow.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI[Browser dashboard or CLI] --> API[FastAPI API]
+    API --> INTENT[Intent parser]
+    INTENT --> CLARIFY[Ambiguity detector and clarifier]
+    CLARIFY --> GENERATE[SQL generator]
+    GENERATE --> GUARD[SQL guardrails]
+    GUARD --> EXEC[Read-only executor]
+    EXEC --> DB[(PostgreSQL)]
+    API --> SESSION[Session repository]
+    API --> AUDIT[JSONL audit log]
 ```
 
-## Browser Dashboard
+### Query workflow
 
-The Queryline dashboard is served by FastAPI at the application root. It provides:
-
-- Workspace-style navigation
-- Database connection status
-- Natural-language query composer
-- Suggested example questions
-- Clarification cards
-- Answer table rendering
-- Generated SQL inspection
-- Responsive desktop and mobile layout
-
-Open this URL after starting the API:
-
-```text
-http://127.0.0.1:8000/
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant Q as Queryline
+    participant D as Database
+    U->>Q: Ask a natural-language question
+    Q->>Q: Parse structured intent
+    alt Intent is ambiguous
+        Q-->>U: Return metric choices
+        U->>Q: Select a definition
+    end
+    Q->>Q: Generate one SELECT statement
+    Q->>Q: Parse, validate, limit, and audit SQL
+    Q->>D: Execute with read-only role
+    D-->>Q: Rows
+    Q-->>U: SQL, explanation, and answer table
 ```
 
-## Database
+## Features
 
-The local database is PostgreSQL 16 running in Docker. The database is named `companies` and contains four tables:
+- Browser dashboard with query composer, examples, clarification cards, SQL preview, and answer table.
+- FastAPI endpoints with interactive OpenAPI documentation.
+- Anthropic tool-use integration with Pydantic-validated structured output.
+- Deterministic offline fallback mode for local demos and tests.
+- Glossary-backed ambiguity detection for customer and employee metrics.
+- SELECT-only SQL enforcement using `sqlglot`.
+- Unknown table and column rejection, comment rejection, system-schema rejection, `pg_sleep` rejection, and query complexity limits.
+- Automatic result cap of 100 rows and five-second PostgreSQL statement timeout.
+- Read-only PostgreSQL execution role.
+- Atomic JSON session persistence for single-instance local deployments.
+- JSONL audit events for generated, executed, and rejected SQL.
+- Offline evaluation set and metrics runner.
+- Docker Compose PostgreSQL sample database.
 
-### `customers`
-
-- `id`
-- `name`
-- `signup_date`
-- `status`
-
-### `orders`
-
-- `id`
-- `customer_id`
-- `order_date`
-- `total_amount`
-- `net_amount`
-
-### `employees`
-
-- `id`
-- `name`
-- `department`
-- `hire_date`
-
-### `sales`
-
-- `id`
-- `employee_id`
-- `order_id`
-- `sale_date`
-- `commission`
-
-The seed script creates approximately:
-
-- 50 customers
-- 300 orders
-- 10 employees
-- 300 sales records
-
-The data intentionally has different customer and employee performance patterns so ambiguous questions produce meaningful alternatives.
-
-The application uses the `readonly_user` PostgreSQL role for execution. The Docker database is mapped to host port `5433` because port `5432` may already be occupied by a native PostgreSQL installation.
-
-The complete reproducible database setup is documented in [DATABASE.md](DATABASE.md). The SQL seed file is included in `app/db/seed_data.sql`, so the database is recreated automatically when the Docker volume is initialized.
-
-## Technology Stack
+## Tech stack
 
 - Python 3.11+
-- FastAPI
-- Pydantic v2
-- PostgreSQL 16
-- Docker Compose
-- psycopg v3
-- sqlglot
-- Anthropic Python SDK
-- Typer-compatible CLI workflow
-- PyYAML
-- pytest
-- HTML, CSS, and vanilla JavaScript dashboard
+- FastAPI and Uvicorn
+- Pydantic v2 and pydantic-settings
+- PostgreSQL 16, psycopg 3, and Docker Compose
+- sqlglot for SQL parsing and validation
+- Anthropic Python SDK for optional live structured generation
+- pytest for automated tests
+- Vanilla HTML, CSS, and JavaScript dashboard
 
-## Project Structure
+## Quick start
 
-```text
-text2sql-clarify/
-├── app/
-│   ├── main.py                  # FastAPI app and dashboard/API routes
-│   ├── cli.py                   # Command-line demo
-│   ├── config.py                # Pydantic settings and .env loading
-│   ├── audit.py                 # JSONL pipeline logging
-│   ├── executor.py              # Read-only PostgreSQL execution
-│   ├── schema.py                # Known schema used by local guardrails
-│   ├── static/                  # Queryline browser dashboard
-│   ├── db/
-│   │   ├── connection.py        # psycopg connection configuration
-│   │   ├── introspect.py        # information_schema introspection
-│   │   └── seed_data.sql        # Tables, data, and read-only role
-│   ├── engine/
-│   │   ├── intent_parser.py     # Anthropic tool output and fallback parser
-│   │   ├── ambiguity_detector.py
-│   │   ├── clarifier.py
-│   │   ├── sql_generator.py     # Anthropic tool output and fallback SQL
-│   │   └── guardrails.py        # sqlglot safety validation
-│   ├── glossary/
-│   │   ├── metrics.yaml         # Business metric candidates
-│   │   └── loader.py
-│   ├── models/                  # Pydantic request and domain models
-│   └── session/                 # In-memory multi-turn session store
-├── tests/
-│   ├── eval_set.json            # 35 hand-labeled ambiguity cases
-│   ├── run_eval.py              # Evaluation metrics runner
-│   └── test_*.py                # Unit and API tests
-├── docker-compose.yml
-├── requirements.txt
-├── .env.example
-└── README.md
-```
+### Prerequisites
 
-## Setup
-
-### Requirements
-
-- Windows, macOS, or Linux
 - Python 3.11 or newer
 - Docker Desktop with the Docker engine running
-- An Anthropic API key is optional for fallback mode and required for live LLM calls
+- An Anthropic API key is optional; fallback mode works without one
 
-### Install and start
+### Install and configure
 
-```powershell
-cd C:\Users\nikit\Downloads\text to sql
+```bash
+git clone https://github.com/nikithpusarla/text-to-sql.git
+cd text-to-sql
 python -m pip install -r requirements.txt
-Copy-Item .env.example .env
+cp .env.example .env
+```
+
+On Windows PowerShell, use `Copy-Item .env.example .env` instead of `cp`.
+
+The `.env.example` file documents database, session, complexity, and Anthropic settings. Do not commit `.env`.
+
+### Start PostgreSQL and the API
+
+```bash
 docker compose up -d
-```
-
-The `.env` file contains local database settings. Do not commit it because it may contain secrets.
-
-### `.env.example` usage
-
-`.env.example` is the complete local configuration template. Copy it to `.env` before starting the API:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-The API connects to PostgreSQL with `POSTGRES_READONLY_USER` and
-`POSTGRES_READONLY_PASSWORD`. On startup, `DATABASE_INIT_ON_STARTUP=true` uses
-the `POSTGRES_USER` and `POSTGRES_PASSWORD` bootstrap account to create missing
-tables, indexes, and read-only grants. Initialization is idempotent and does not
-seed or truncate data.
-
-For a production deployment, run schema migrations through a release job and
-set `DATABASE_INIT_ON_STARTUP=false` for the web process. Store all database and
-Anthropic credentials in the deployment secret manager rather than committing
-`.env`.
-
-Verify the container:
-
-```powershell
-docker compose ps
-```
-
-Verify the live schema:
-
-```powershell
-python -m app.db.introspect
-```
-
-Start the API:
-
-```powershell
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-Then open:
+Open:
 
-- Dashboard: `http://127.0.0.1:8000/`
-- Swagger UI: `http://127.0.0.1:8000/docs`
-- Health check: `http://127.0.0.1:8000/health`
+- Dashboard: <http://127.0.0.1:8000/>
+- API docs: <http://127.0.0.1:8000/docs>
+- Health check: <http://127.0.0.1:8000/health>
 
-Run the interactive CLI against the configured database:
+The first API startup creates missing tables, indexes, and read-only grants when `DATABASE_INIT_ON_STARTUP=true`. It does not reseed or truncate existing data. For production, run migrations as a release step and set that setting to `false` for web workers.
 
-```powershell
+### CLI
+
+```bash
 python -m app.cli "Who is our best customer?"
 ```
 
-## Example User Flow
+The CLI asks clarification questions, validates the generated SQL, executes it, and prints the SQL and returned rows.
 
-1. Open the dashboard.
-2. Ask: `Who is our best customer?`
-3. Choose `total_spend`, `order_count`, or `recency`.
-4. Queryline generates one guarded PostgreSQL `SELECT` statement.
-5. The read-only executor runs the query.
-6. The dashboard displays the answer rows and generated SQL.
+## Demo flow
 
-## Example Questions and Generated SQL
+1. Ask `Who is our best customer?`.
+2. Queryline detects that "best" is ambiguous and offers total spend, order count, and recency.
+3. Select `total_spend`.
+4. Queryline generates one PostgreSQL `SELECT` statement.
+5. The guardrail layer rejects writes, unknown objects, dangerous functions, comments, cross-schema access, and overly complex queries.
+6. The read-only executor runs the statement with a five-second timeout.
+7. The dashboard displays the answer table, explanation, selected metric, and generated SQL.
 
-With fallback mode enabled, these questions are deterministic after the
-clarification choice:
+## Example prompts and SQL
 
-| Question | Clarification | Generated SQL shape |
-| --- | --- | --- |
-| `Who is our best customer?` | `total_spend` | `SELECT customers.name, SUM(orders.total_amount) AS total_spend ... ORDER BY total_spend DESC LIMIT 100` |
-| `Who has the most orders?` | `order_count` | `SELECT customers.name, COUNT(orders.id) AS order_count ... ORDER BY order_count DESC LIMIT 100` |
-| `Which employee sold the most?` | `sales_count` | `SELECT employees.name, COUNT(sales.id) AS sales_count ... ORDER BY sales_count DESC LIMIT 100` |
+These examples describe the deterministic fallback behavior. Live Anthropic output is still validated by the same guardrail layer.
 
-The generated SQL is always passed through the SELECT-only validator before it
-can be executed. The full statement is returned by the API and shown in the
-dashboard for inspection.
+### 1. Best customer by spend
 
-## API Endpoints
+Prompt: `Who is our best customer?`
+
+Clarification: `Total amount spent`
+
+```sql
+SELECT customers.name, SUM(orders.total_amount) AS total_spend
+FROM customers
+JOIN orders ON orders.customer_id = customers.id
+GROUP BY customers.id, customers.name
+ORDER BY total_spend DESC
+LIMIT 100
+```
+
+Explanation: ranks customers by the sum of order totals, descending.
+
+### 2. Customer order activity
+
+Prompt: `Who has the most orders?`
+
+Clarification: `Number of orders placed`
+
+```sql
+SELECT customers.name, COUNT(orders.id) AS order_count
+FROM customers
+JOIN orders ON orders.customer_id = customers.id
+GROUP BY customers.id, customers.name
+ORDER BY order_count DESC
+LIMIT 100
+```
+
+Explanation: ranks customers by order count, descending.
+
+### 3. Employee performance
+
+Prompt: `Which employee sold the most?`
+
+Clarification: `Number of sales made`
+
+```sql
+SELECT employees.name, COUNT(sales.id) AS sales_count
+FROM employees
+JOIN sales ON sales.employee_id = employees.id
+GROUP BY employees.id, employees.name
+ORDER BY sales_count DESC
+LIMIT 100
+```
+
+Explanation: ranks employees by linked sales records, descending.
+
+## API
 
 ### `GET /health`
 
-Returns the service status.
+Returns service readiness:
+
+```json
+{"status": "ok"}
+```
 
 ### `POST /query`
 
-Starts a query session.
+Starts or replaces a persisted session.
 
 ```json
-{
-  "query": "Who is our best customer?"
-}
+{"query": "Who is our best customer?"}
 ```
 
-If the question is ambiguous, the response contains a `session_id` and clarification questions.
+The response contains a `session_id` and clarification questions, or a guarded SQL result when the intent is already resolved.
 
 ### `POST /clarify`
 
-Resolves one slot in an existing session.
+Resolves one slot in a session:
 
 ```json
-{
-  "session_id": "your-session-id",
-  "slot_name": "metric",
-  "chosen_value": "total_spend"
-}
+{"session_id": "session-id", "slot_name": "metric", "chosen_value": "total_spend"}
 ```
-
-When all required slots are resolved, the response contains generated SQL.
 
 ### `POST /execute`
 
-Validates and executes a SQL statement against PostgreSQL.
+Validates and executes a read-only statement:
 
 ```json
-{
-  "sql": "SELECT name FROM customers LIMIT 10"
-}
+{"sql": "SELECT name FROM customers"}
 ```
 
-The endpoint rejects write statements, unknown tables, unknown columns, and multiple SQL statements.
+Rejected SQL returns HTTP 422 with the explicit validation reason. Database failures return HTTP 503 without exposing database internals.
 
-## Anthropic Integration
+## Evaluation
 
-When `ANTHROPIC_API_KEY` contains a real key, the application uses Anthropic tool-based structured output for:
+Run the unit suite:
 
-1. Converting a natural-language question into a `QueryIntent`
-2. Generating an `SQLGenerationResult` from a resolved intent
-
-The application does not ask the model to return unstructured JSON text. It uses tool schemas validated by Pydantic.
-
-Without a real key, the application uses a deterministic parser and fallback SQL generator. This makes local development and automated tests possible without external API access.
-
-Configure live LLM mode in `.env`:
-
-```env
-ANTHROPIC_API_KEY=your_real_key
-ANTHROPIC_MODEL=claude-haiku-4-5-20251001
-```
-
-## Testing
-
-Run the automated tests:
-
-```powershell
+```bash
 python -m pytest -q
 ```
 
-The current suite covers:
+Run the offline evaluator:
 
-- Glossary ambiguity detection
-- Deterministic intent parsing
-- Pydantic resolved-intent validation
-- SELECT-only SQL enforcement
-- Unknown table and column rejection
-- Multiple-statement rejection
-- Automatic `LIMIT 100`
-- API health and dashboard delivery
-- Multi-turn clarification
-- Seed schema and read-only role configuration
-
-Run the evaluation set:
-
-```powershell
-python tests\run_eval.py
+```bash
+python tests/run_eval.py
 ```
 
-The current evaluation set contains 35 examples and reports:
+The evaluator combines the original ambiguity cases with `tests/evaluation_cases.json` and reports:
 
-- Ambiguity detection percentage
-- False positives
-- False negatives
-- Average clarification turns
+- Intent classification accuracy for entity selection.
+- Ambiguity precision and recall.
+- Clarification candidate recall.
+- Average clarification turns.
+- Average deterministic parser latency.
+- Fallback SQL semantic correctness against resolved intent cases.
+- Explicit placeholders for live SQL execution success and unsafe-query rejection, which are verified by integration tests and guardrail tests respectively.
 
-Latest verified results:
+The current offline results are reproducible on this repository. They are not claims about live Anthropic latency or a hosted database.
+
+## Security and guardrails
+
+- Application queries use the configured read-only PostgreSQL role.
+- Only one top-level `SELECT` statement is accepted.
+- SQL comments are rejected to reduce injection ambiguity.
+- `pg_sleep`, system schemas, unknown tables, and unknown columns are rejected.
+- Join count, function count, and query length are capped by environment settings.
+- Missing limits are capped at 100 rows.
+- PostgreSQL `statement_timeout` is set to five seconds per execution.
+- Rejected statements are logged with their reason; secrets are not logged by the application.
+
+## Project structure
 
 ```text
-24 passed
-ambiguity detection: 100.0% (35/35)
-false positives: 0
-false negatives: 0
-average clarification turns: 1.00
+app/
+  main.py                 FastAPI routes and application lifecycle
+  cli.py                  Interactive command-line workflow
+  config.py               Environment-backed settings
+  executor.py             Read-only PostgreSQL execution
+  audit.py                JSONL audit events
+  schema.py               Local guardrail schema contract
+  db/
+    connection.py         Application and bootstrap connections
+    initialize.py         Idempotent schema and grants initialization
+    schema.sql             Tables and indexes
+    seed_data.sql          Reproducible local sample data
+  engine/
+    intent_parser.py      Anthropic and deterministic intent parsing
+    ambiguity_detector.py Glossary-backed unresolved-slot detection
+    clarifier.py          Human-readable clarification questions
+    sql_generator.py      Anthropic and deterministic SQL generation
+    guardrails.py         SQL validation and complexity controls
+  session/state.py        Atomic local session repository
+  static/                 Dashboard assets
+  models/                 Pydantic domain contracts
+tests/
+  test_*.py               Unit and API tests
+  eval_set.json           Original ambiguity benchmark
+  evaluation_cases.json   Expanded structured benchmark
+  run_eval.py             Offline metrics runner
 ```
 
-## Safety and Guardrails
+## Deployment
 
-- Database access uses a read-only PostgreSQL role.
-- Queries are parsed with `sqlglot` using the PostgreSQL dialect.
-- Only one `SELECT` statement is accepted.
-- Referenced tables and columns are checked against the schema.
-- Missing limits are automatically capped at 100 rows.
-- PostgreSQL `statement_timeout` is set to five seconds per execution.
-- Generated SQL and resolved intent are written to `logs/pipeline.jsonl`.
-- `.env`, runtime logs, caches, and virtual environments are excluded from Git.
+The API can be deployed to a Python host such as Railway, Render, Fly.io, or a container platform. PostgreSQL must be external to the web process. Configure all settings through the host secret manager, set `DATABASE_INIT_ON_STARTUP=false` after running schema setup, and use a persistent session backend for multiple instances.
 
-## Current Prototype Limitations
+Vercel can host a Python API adapter, but it does not run this repository's Docker PostgreSQL service and its serverless lifecycle is not compatible with process-local state. Use an external PostgreSQL database and replace the local JSON session repository with Redis or PostgreSQL before using multiple serverless instances.
 
-- Sessions are stored in memory and are lost when the API restarts.
-- The current workspace uses one database configuration.
-- Authentication and billing are not included yet.
-- Multi-tenant isolation needs to be added before connecting multiple companies.
-- The evaluation set is hand-labeled and intentionally small.
-- Production deployment, HTTPS, rate limiting, and secret management still need to be configured for a hosted SaaS release.
+## Limitations
+
+- The local JSON session repository is durable for one instance but is not a distributed session store.
+- Authentication, tenant isolation, rate limiting, billing, and audit-log retention are not implemented.
+- The sample schema and glossary model one company and a small synthetic dataset.
+- Live LLM output quality and latency depend on the configured Anthropic model and are not represented by the offline metrics.
+- The test suite does not claim a live Docker database run on every platform; CI validates application behavior and Compose syntax separately from optional database integration.
+- A migration tool is not included yet; `schema.sql` is intentionally small and idempotent for this portfolio project.
 
 ## Roadmap
 
-- Add user authentication and organization workspaces
-- Add tenant-specific database connections and glossaries
-- Persist sessions and query history in PostgreSQL or Redis
-- Add streaming answer generation
-- Add saved reports and scheduled queries
-- Add usage limits, billing, and admin analytics
-- Add connectors for MySQL, Snowflake, BigQuery, and SQL Server
-- Add a production deployment configuration
+1. Replace the JSON session repository with PostgreSQL or Redis and add expiration.
+2. Add authentication, organization isolation, rate limiting, and query quotas.
+3. Add a migration tool and a dedicated integration-test job with PostgreSQL.
+4. Expand semantic evaluation with execution-backed expected result fixtures.
+5. Add saved reports, query history, and streaming progress states.
+6. Add connectors for Snowflake, BigQuery, MySQL, and SQL Server.
+
+## License
+
+No license has been declared yet. Add a license before redistributing the project.

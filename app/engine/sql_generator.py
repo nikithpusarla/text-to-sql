@@ -6,7 +6,6 @@ from app.config import settings
 from app.models.intent import ResolvedIntent
 from app.models.sql_result import SQLGenerationResult
 
-
 SQL_TOOL = {
     "name": "generate_sql",
     "description": "Generate one read-only PostgreSQL SELECT statement for the resolved intent.",

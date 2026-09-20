@@ -1,17 +1,37 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 
 import sqlglot
 from sqlglot import exp
 from sqlglot.errors import ParseError
 
+from app.config import settings
+
 
 class SQLValidationError(ValueError):
     """Raised when generated SQL violates the read-only query contract."""
 
 
-def validate_and_limit(sql: str, schema: Mapping[str, list[str]], limit: int = 100) -> str:
+def validate_and_limit(
+    sql: str,
+    schema: Mapping[str, list[str]],
+    limit: int = 100,
+    *,
+    max_length: int = settings.max_query_length,
+    max_joins: int = settings.max_query_joins,
+    max_functions: int = settings.max_query_functions,
+) -> str:
+    normalized = sql.strip()
+    if not normalized:
+        raise SQLValidationError("Query is empty")
+    if len(normalized) > max_length:
+        raise SQLValidationError(f"Query exceeds the {max_length}-character limit")
+    if "--" in normalized or "/*" in normalized or "*/" in normalized:
+        raise SQLValidationError("SQL comments are not allowed")
+    if re.search(r"\bpg_sleep\s*\(", normalized, flags=re.IGNORECASE):
+        raise SQLValidationError("Function pg_sleep is not allowed")
     try:
         statements = sqlglot.parse(sql, read="postgres")
     except ParseError as exc:
@@ -22,6 +42,13 @@ def validate_and_limit(sql: str, schema: Mapping[str, list[str]], limit: int = 1
 
     statement = statements[0]
     known_tables = set(schema)
+    if len(list(statement.find_all(exp.Join))) > max_joins:
+        raise SQLValidationError(f"Query exceeds the {max_joins}-join complexity limit")
+    if len(list(statement.find_all(exp.Func))) > max_functions:
+        raise SQLValidationError(f"Query exceeds the {max_functions}-function complexity limit")
+    for table in statement.find_all(exp.Table):
+        if table.db or table.catalog:
+            raise SQLValidationError("System or cross-schema table access is not allowed")
     aliases: dict[str, str] = {}
     output_aliases = {alias.alias for alias in statement.find_all(exp.Alias)}
     for table in statement.find_all(exp.Table):

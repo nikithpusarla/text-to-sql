@@ -1,8 +1,8 @@
-from pydantic import ValidationError
 import pytest
+from pydantic import ValidationError
 
-from app.models.intent import MetricSlot, ResolvedIntent, SlotStatus
 from app.engine.intent_parser import parse_without_llm
+from app.models.intent import MetricSlot, ResolvedIntent, SlotStatus
 
 
 def test_parser_returns_pydantic_intent():

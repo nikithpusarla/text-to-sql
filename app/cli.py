@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import argparse
 
-from app.engine.guardrails import validate_and_limit
 from app.engine.ambiguity_detector import detect_ambiguity
 from app.engine.clarifier import build_clarification_questions
+from app.engine.guardrails import validate_and_limit
 from app.engine.intent_parser import parse_with_llm
 from app.engine.sql_generator import generate_with_llm
 from app.executor import execute_sql
-from app.schema import SCHEMA
 from app.models.intent import MetricSlot, QueryIntent, SlotStatus
+from app.schema import SCHEMA
 
 
 def build_demo_intent(raw_query: str) -> QueryIntent:

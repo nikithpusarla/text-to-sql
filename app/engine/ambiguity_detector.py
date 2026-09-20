@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from app.glossary.loader import candidates_for_entity, match_metric_candidates
-from app.models.intent import MetricSlot, QueryIntent, SlotStatus
+from app.models.intent import QueryIntent, SlotStatus
 
 
 def detect_ambiguity(intent: QueryIntent) -> dict[str, list[str]]:

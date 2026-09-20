@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 import yaml
 
@@ -17,7 +17,7 @@ def match_metric_candidates(query: str) -> list[dict]:
     normalized = query.lower()
     words = set(re.findall(r"[a-z]+", normalized))
     ranking_words = {"best", "top", "worst", "biggest", "highest", "lowest", "least", "most", "strongest", "performing", "valuable", "recent"}
-    for _, metric in load_metrics().items():
+    for metric in load_metrics().values():
         aliases = [alias.lower() for alias in metric.get("aliases", [])]
         if any(alias in normalized for alias in aliases):
             return metric.get("candidates", [])

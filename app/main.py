@@ -7,19 +7,19 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.audit import log_event
+from app.config import settings
+from app.db.initialize import initialize_schema
 from app.engine.ambiguity_detector import detect_ambiguity
 from app.engine.clarifier import build_clarification_questions
 from app.engine.guardrails import SQLValidationError, validate_and_limit
 from app.engine.intent_parser import parse_with_llm
 from app.engine.sql_generator import generate_with_llm
-from app.audit import log_event
-from app.config import settings
-from app.db.initialize import initialize_schema
 from app.executor import execute_sql
-from app.schema import SCHEMA
 from app.models.clarification import ClarificationResponse
 from app.models.intent import MetricSlot, ResolvedIntent, SlotStatus
 from app.models.query import ExecuteRequest, QueryRequest, QueryResponse
+from app.schema import SCHEMA
 from app.session.state import get_session, set_session, update_session
 
 
@@ -49,6 +49,7 @@ def execute(request: ExecuteRequest) -> dict:
     try:
         validated_sql = validate_and_limit(request.sql, SCHEMA)
     except SQLValidationError as exc:
+        log_event("sql_rejected", {"sql": request.sql, "reason": str(exc)})
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         rows = execute_sql(validated_sql)

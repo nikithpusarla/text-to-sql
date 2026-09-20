@@ -1,0 +1,14 @@
+[
+  {"query": "who is our best customer", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "which employee is performing best", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]},
+  {"query": "show top customers", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "show top employees", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]},
+  {"query": "who is the worst customer", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "which sales representative is best", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]},
+  {"query": "rank our biggest accounts", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "find the best staff member", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]},
+  {"query": "top client last month", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "worst sales rep this year", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]},
+  {"query": "which customer has the most orders", "expected_entity": "customer", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_spend", "order_count", "recency"]},
+  {"query": "which employee earned the most", "expected_entity": "employee", "expected_ambiguous_slots": ["metric"], "expected_candidates": ["total_commission", "sales_count"]}
+]
